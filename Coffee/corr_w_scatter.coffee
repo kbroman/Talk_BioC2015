@@ -46,7 +46,32 @@ d3.json "Data/corr_w_scatter.json", (data) ->
       corr.push({row:i, col:j, value:data.corr[i][j]})
 
 
-  cells = corrplot.selectAll("empty")
+  cellgroup = corrplot.append("g").attr("id", "cells")
+  corrlab = corrplot.append("g").attr("id", "corrlab")
+  corrlabX = corrlab.append("text").attr("id","corrlabelX").attr("class", "corrlabel")
+                         .attr("dominant-baseline", "middle")
+                         .attr("text-anchor", "middle")
+                         .attr("fill", "Wheat")
+  corrlabY = corrlab.append("text").attr("id","corrlabelY").attr("class", "corrlabel")
+                         .attr("dominant-baseline", "middle")
+                         .attr("text-anchor", "end")
+                         .attr("fill", "Wheat")
+  corrtip = corrplot.append("g").attr("id", "corrtip")
+  corrtip_rect = corrtip.append("rect").attr("id", "corrrect")
+                         .attr("height", 50)
+                         .attr("width", 100)
+                         .attr("fill", "white")
+                         .attr("stroke", "#181818")
+                         .attr("stroke-width", "1")
+                         .attr("opacity", 0)
+                         .style("pointer-events", "none")
+
+  corrtip_lab=corrtip.append("text").attr("id", "corrtext")
+                         .attr("fill", "black")
+                         .attr("dominant-baseline", "middle")
+
+
+  cells = cellgroup.selectAll("empty")
              .data(corr)
              .enter().append("rect")
              .attr("class", "cell")
@@ -57,25 +82,16 @@ d3.json "Data/corr_w_scatter.json", (data) ->
              .attr("fill", (d) -> corZscale(d.value))
              .attr("stroke", "none")
              .attr("stroke-width", 2)
-             .on("mouseover", (d) ->
+             .on "mouseover", (d) ->
                  d3.select(this).attr("stroke", "black")
-                 corrplot.append("rect").attr("id", "corrtext")
-                         .attr("x", ->
+                 corrtip_rect.attr("x", ->
                              return corXscale(d.col) + 15 if d.col < nvar/2
                              corXscale(d.col) - 110)
                          .attr("y", ->
                              return corYscale(d.row) - 40 if d.row < nvar/2
                              corYscale(d.row))
-                         .attr("height", 50)
-                         .attr("width", 100)
-                         .attr("fill", "white")
-                         .attr("stroke", "#181818")
-                         .attr("stroke-width", "1")
                          .attr("opacity", 0.5)
-                         .style("pointer-events", "none")
-                 corrplot.append("text").attr("id", "corrtext")
-                         .text(d3.format(".2f")(d.value))
-                         .attr("x", ->
+                 corrtip_lab.attr("x", ->
                              mult = -1
                              mult = +1 if d.col < nvar/2
                              corXscale(d.col) + mult * 30)
@@ -83,32 +99,26 @@ d3.json "Data/corr_w_scatter.json", (data) ->
                              mult = +1
                              mult = -1 if d.row < nvar/2
                              corYscale(d.row) + (mult + 0.35) * 20)
-                         .attr("fill", "black")
-                         .attr("dominant-baseline", "middle")
+                         .text(d3.format(".2f")(d.value))
                          .attr("text-anchor", ->
                              return "start" if d.col < nvar/2
                              "end")
-                 corrplot.append("text").attr("class","corrlabel")
-                         .attr("x", corXscale(d.col))
+                         .attr("opacity", 1)
+                 corrlabX.attr("x", corXscale(d.col))
                          .attr("y", h+pad.bottom*0.2)
                          .text(data.var[d.col])
-                         .attr("dominant-baseline", "middle")
-                         .attr("text-anchor", "middle")
-                         .attr("fill", "Wheat")
-                 corrplot.append("text").attr("class","corrlabel")
-                         .attr("y", corYscale(d.row))
+                         .attr("opacity", 1)
+                 corrlabY.attr("y", corYscale(d.row))
                          .attr("x", -pad.left*0.1)
                          .text(data.var[d.row])
-                         .attr("dominant-baseline", "middle")
-                         .attr("text-anchor", "end")
-                         .attr("fill", "Wheat"))
-             .on("mouseout", ->
-                 d3.selectAll("text.corrlabel").remove()
-                 d3.selectAll("text#corrtext").remove()
-                 d3.selectAll("rect#corrtext").remove()
-                 d3.select(this).attr("stroke","none"))
+                         .attr("opacity", 1)
+             .on "mouseout", ->
+                 d3.select(this).attr("stroke","none")
+                 corrtip.select("rect").attr("opacity", 0)
+                 corrtip.select("text").attr("opacity", 0)
+                 corrlabX.attr("opacity", 0)
+                 corrlabY.attr("opacity", 0)
              .on("click",(d) ->
-                 d3.select("span#heatmap_hide").style("opacity", 1)
                  drawScatter(d.col, d.row))
 
   # colors for scatterplot
@@ -126,9 +136,18 @@ d3.json "Data/corr_w_scatter.json", (data) ->
       colorScale = d3.scale.category20()
     colors = (colorScale(i) for i of d3.range(nGroup))
 
+  indtip = d3.svg.tip()
+           .orient("right")
+           .padding(3)
+           .text((d,i) -> "Mouse#{d3.format("03d")(i)}")
+           .attr("class", "d3-tip")
+           .attr("id", "indtip")
+
   firsttime = true
   drawScatter = (i,j) ->
     if firsttime
+      d3.select("span#heatmap_hide").style("opacity", 1)
+
       # gray background on scatterplot
       scatterplot.append("rect")
                .attr("height", h)
@@ -139,17 +158,9 @@ d3.json "Data/corr_w_scatter.json", (data) ->
                .attr("pointer-events", "none")
       firsttime = false
 
-    indtip = d3.svg.tip()
-               .orient("right")
-               .padding(3)
-               .text((d,i) -> "Mouse#{d3.format("03d")(i)}")
-               .attr("class", "d3-tip")
-               .attr("id", "indtip")
-
-    d3.selectAll("circle.points").remove()
-    d3.selectAll("text.axes").remove()
-    d3.selectAll("line.axes").remove()
-    d3.select("rect#scatter_outerbox").remove()
+    scatterplot.selectAll("circle.points").remove()
+    scatterplot.selectAll("text.axes").remove()
+    scatterplot.selectAll("line.axes").remove()
     xScale = d3.scale.linear()
                      .domain(d3.extent(data.dat[i]))
                      .range([innerPad, w-innerPad])
@@ -237,34 +248,33 @@ d3.json "Data/corr_w_scatter.json", (data) ->
                .attr("stroke", "black")
                .attr("stroke-width", 1)
                .attr("fill", (d) -> colors[data.group[d]-1])
-               .on "mouseover", (d,i) ->
-                   d3.select(this).attr("r", 6)
-                   x = d3.select(this).attr("cx")
-                   y = d3.select(this).attr("cy")
-                   indtip.call(this, d, i)
-                   d3.select("g#indtip")
-                     .attr("transform", (d) ->
-                         tx = pad.left*2+pad.right+w+extraPad
-                         ty = pad.top
-                         hx = 20
-                         hy = -15
-                         console.log(x, tx, y, ty, x+tx, y+ty)
-                         "translate(#{+x+tx+hx},#{+y+ty+hy})")
-               .on "mouseout", (d,i) ->
-                   d3.select(this).attr("r", 3)
-                   d3.selectAll("#indtip").remove()
-
-    scatterplot.append("rect")
-             .attr("height", h)
-             .attr("width", w)
-             .attr("id", "scatter_outerbox")
-             .attr("fill", "none")
-             .attr("stroke", "black")
-             .attr("stroke-width", 1)
-             .attr("pointer-events", "none")
-
+           .on "mouseover", (d,i) ->
+               d3.select(this).attr("r", 6)
+               x = d3.select(this).attr("cx")
+               y = d3.select(this).attr("cy")
+               indtip.call(this, d, i)
+               d3.select("g#indtip")
+                 .attr("transform", (d) ->
+                     tx = pad.left*2+pad.right+w+extraPad
+                     ty = pad.top
+                     hx = 20
+                     hy = -15
+                     console.log(x, tx, y, ty, x+tx, y+ty)
+                     "translate(#{+x+tx+hx},#{+y+ty+hy})")
+           .on "mouseout", (d,i) ->
+               d3.select(this).attr("r", 3)
+               d3.selectAll("#indtip").remove()
 
   # boxes around panels
+  scatterplot.append("rect")
+         .attr("height", h)
+         .attr("width", w)
+         .attr("id", "scatter_outerbox")
+         .attr("fill", "none")
+         .attr("stroke", "black")
+         .attr("stroke-width", 1)
+         .attr("pointer-events", "none")
+
   corrplot.append("rect")
          .attr("height", h)
          .attr("width", w)
