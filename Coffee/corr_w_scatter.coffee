@@ -121,6 +121,15 @@ d3.json "Data/corr_w_scatter.json", (data) ->
              .on("click",(d) ->
                  drawScatter(d.col, d.row))
 
+  # box around panel
+  corrplot.append("rect")
+         .attr("height", h)
+         .attr("width", w)
+         .attr("fill", "none")
+         .attr("stroke", "black")
+         .attr("stroke-width", 1)
+         .attr("pointer-events", "none")
+
   # colors for scatterplot
   nGroup = d3.max(data.group)
   if nGroup == 1
@@ -265,19 +274,11 @@ d3.json "Data/corr_w_scatter.json", (data) ->
                d3.select(this).attr("r", 3)
                d3.selectAll("#indtip").remove()
 
-  # boxes around panels
-  scatterplot.append("rect")
+    # box around panel
+    scatterplot.append("rect")
          .attr("height", h)
          .attr("width", w)
          .attr("id", "scatter_outerbox")
-         .attr("fill", "none")
-         .attr("stroke", "black")
-         .attr("stroke-width", 1)
-         .attr("pointer-events", "none")
-
-  corrplot.append("rect")
-         .attr("height", h)
-         .attr("width", w)
          .attr("fill", "none")
          .attr("stroke", "black")
          .attr("stroke-width", 1)
